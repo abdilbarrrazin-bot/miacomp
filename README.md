@@ -40,8 +40,8 @@ Prototype dalam pengembangan. Fitur yang membutuhkan backend bergantung pada kon
 - **Kompetisi:** MIA 2026 — Web In Action
 - **Tim:** Coding Pemersatu Bangsa
 - **Anggota:** Adila Huzaifa Syahdinubrata Al Bukhari Haque, Akram Ammar Ariban, Razin Abdilbar
-- **Repository:** [Link GitHub]
-- **Demo:** [Link Website jika tersedia]
+- **Repository:** https://github.com/abdilbarrrazin-bot/miacomp.io/tree/main
+- **Demo:** -
 
 ----------------------------------------------------------------------------------------------------
 
