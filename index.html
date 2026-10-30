@@ -1,0 +1,1304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InfrastrukturKu - Portal Laporan Fasilitas Umum & Transparansi Publik</title>
+  <meta name="description" content="Satu portal untuk laporan, pelayanan, dan transparansi publik. Lapor masalah infrastruktur, pantau proses penanganan, dan buktikan hasilnya dengan fitur BuktiTuntas.">
+  
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏛️</text></svg>">
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div id="sidebar-backdrop"></div>
+
+  <div id="toast-container"></div>
+
+  <div class="app-layout">
+    
+    <!-- SIDEBAR NAVIGATION-->
+    <aside class="app-sidebar">
+      <div>
+        <div class="sidebar-header">
+          <a href="#dashboard" class="brand-logo">
+            <div class="brand-icon-box">
+              <i class="fa-solid fa-landmark-dome"></i>
+            </div>
+            <div class="brand-text">
+              <h2>InfrastrukturKu</h2>
+              <span>Portal Pelayanan Publik</span>
+            </div>
+          </a>
+          <button class="sidebar-close-btn" id="btn-sidebar-close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">Menu Utama</div>
+          
+          <a href="#dashboard" class="sidebar-nav-item active" data-view="dashboard">
+            <span>Dashboard</span>
+          </a>
+
+          <a href="#laporan-form" class="sidebar-nav-item" data-view="laporan-form">
+            <span>Buat Laporan</span>
+          </a>
+
+          <a href="#daftar-laporan" class="sidebar-nav-item" data-view="daftar-laporan">
+            <span>Laporan Saya</span>
+          </a>
+
+          <a href="#pengaduan" class="sidebar-nav-item" data-view="pengaduan">
+            <span>Pengaduan</span>
+          </a>
+
+          <a href="#perizinan" class="sidebar-nav-item" data-view="perizinan">
+            <span>Perizinan</span>
+          </a>
+
+          <a href="#bansos" class="sidebar-nav-item" data-view="bansos">
+            <span>Bantuan Sosial</span>
+          </a>
+
+          <div class="nav-section-title">Transparansi & Pelacakan</div>
+
+          <a href="#transparansi" class="sidebar-nav-item" data-view="transparansi">
+            <span>Data & Transparansi</span>
+          </a>
+
+          <a href="#lacak-publik" class="sidebar-nav-item" data-view="lacak-publik">
+            <span>Lacak Pengajuan</span>
+          </a>
+
+          <!-- Officer Menu (Only visible or emphasized for Officers) -->
+          <div id="nav-instansi" style="display: none;">
+            <div class="nav-section-title">Aparatur / Petugas</div>
+            <a href="#dashboard-instansi" class="sidebar-nav-item" data-view="dashboard-instansi">
+              <span>Dashboard Instansi</span>
+            </a>
+          </div>
+
+          <div class="nav-section-title">Akun & Sistem</div>
+
+          <a href="#profil" class="sidebar-nav-item" data-view="profil">
+            <span>Profil & Pengaturan</span>
+          </a>
+
+          <a href="javascript:void(0)" class="sidebar-nav-item" onclick="app.switchUserRole()">
+            <span>Ganti Peran (Role)</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- User Profile Box at bottom of Sidebar -->
+      <div class="sidebar-footer">
+        <div class="sidebar-user-card" onclick="app.navigate('profil')">
+          <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80" alt="Avatar" class="user-avatar" id="user-profile-avatar">
+          <div class="user-info">
+            <div class="user-name" id="user-profile-name">Andi Pratama</div>
+            <div class="user-role-label" id="user-profile-role">Masyarakat</div>
+          </div>
+          <i class="fa-solid fa-ellipsis-vertical" style="color: var(--color-slate-400);"></i>
+        </div>
+      </div>
+    </aside>
+
+    <!-- TOPBAR NAVBAR-->
+    <header class="app-topbar">
+      <div class="topbar-left">
+        <button class="mobile-menu-btn" id="btn-mobile-menu">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="topbar-search-box">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" id="topbar-search-input" placeholder="Cari laporan, lokasi, atau nomor tiket (contoh: INF-2025-0012)...">
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <!-- Quick Role Switch Pill -->
+        <div class="role-pill role-citizen" id="topbar-role-pill" onclick="app.switchUserRole()" title="Klik untuk beralih antara Mode Warga dan Mode Petugas Dinas">
+          <i class="fa-solid fa-shield"></i>
+          <span>Mode Warga</span>
+        </div>
+
+        <!-- Quick Database/Supabase Settings Button
+        <button class="topbar-action-icon" onclick="document.getElementById('modal-supabase-config').classList.add('active')" title="Pengaturan Database & Supabase">
+          <i class="fa-solid fa-database"></i>
+        </button> -->
+
+        <!-- Notification Bell -->
+        <div class="topbar-action-icon" onclick="app.showToast('Anda memiliki 2 pembaharuan tindak lanjut laporan.', 'info')" title="Notifikasi">
+          <i class="fa-regular fa-bell"></i>
+          <span class="notification-badge"></span>
+        </div>
+
+        <!-- User Avatar-->
+        <div class="topbar-avatar-btn" onclick="app.navigate('profil')">
+          <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80" alt="User Avatar" id="topbar-avatar">
+        </div>
+      </div>
+    </header>
+
+    <main class="app-main-content">
+
+      <!-- LOGIN & REGISTER-->
+      <section id="view-auth" class="app-view">
+        <div class="auth-split-screen">
+          <!-- Left Hero Banner with Jakarta Monas / Skyline -->
+          <div class="auth-hero-banner" style="background-image: url('assets/images/hero_monas.jpg');">
+            <div class="auth-hero-overlay"></div>
+            
+            <div class="auth-hero-header">
+              <a href="#dashboard" class="brand-logo">
+                <div class="brand-icon-box">
+                  <i class="fa-solid fa-landmark-dome"></i>
+                </div>
+                <div class="brand-text">
+                  <h2>InfrastrukturKu</h2>
+                  <span>Portal Pelayanan Publik</span>
+                </div>
+              </a>
+            </div>
+
+            <div class="auth-hero-body">
+              <h1>Lapor Masalahnya.<br>Pantau Prosesnya.<br>Buktikan Hasilnya.</h1>
+              <p>Satu portal terpadu untuk laporan, pelayanan, dan transparansi infrastruktur publik di seluruh Indonesia dengan jaminan <strong>BuktiTuntas</strong>.</p>
+            </div>
+
+            <div class="auth-hero-footer">
+              <span style="color: rgba(255, 255, 255, 0.6); font-size: 12px;">
+                &copy; 2026 InfrastrukturKu &bull; Kementerian PUPR & Pemerintah Daerah RI
+              </span>
+            </div>
+          </div>
+
+        
+          <div class="auth-form-container">
+            <div class="auth-form-card">
+              <div class="auth-tabs">
+                <button class="auth-tab-btn active" id="tab-btn-login" onclick="app.switchAuthTab('login')">Masuk</button>
+                <button class="auth-tab-btn" id="tab-btn-register" onclick="app.switchAuthTab('register')">Daftar</button>
+              </div>
+
+              <!-- Login Form -->
+              <form id="auth-login-form" onsubmit="app.handleLogin(event)">
+                <div class="form-group">
+                  <label class="form-label">Email atau Nomor HP</label>
+                  <input type="text" class="form-control" id="login-email" value="andipratama@gmail.com" required placeholder="nama@email.com / 0812xxxx">
+                </div>
+                <div class="form-group">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">
+                    <label class="form-label" style="margin-bottom: 0;">Password</label>
+                    <a href="javascript:void(0)" onclick="app.showToast('Tautan reset password telah dikirim ke email Anda.', 'info')" style="font-size: 12px;">Lupa password?</a>
+                  </div>
+                  <input type="password" class="form-control" id="login-password" value="rahasia123" required placeholder="Masukkan kata sandi">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 20px;">
+                  <input type="checkbox" id="remember-me" checked>
+                  <label for="remember-me" style="font-size: 13px; color: var(--color-slate-600); cursor: pointer;">Ingat saya di perangkat ini</label>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i class="fa-solid fa-right-to-bracket"></i> Masuk Sekarang
+                </button>
+              </form>
+
+              <!-- Register Form -->
+              <form id="auth-register-form" style="display: none;" onsubmit="app.handleRegister(event)">
+                <div class="form-group">
+                  <label class="form-label">Nama Lengkap Sesuai KTP</label>
+                  <input type="text" class="form-control" id="reg-name" required placeholder="Contoh: Andi Pratama">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Alamat Email</label>
+                  <input type="email" class="form-control" id="reg-email" required placeholder="nama@email.com">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nomor Handphone (WhatsApp)</label>
+                  <input type="tel" class="form-control" id="reg-phone" placeholder="081234567890">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Kata Sandi Baru</label>
+                  <input type="password" class="form-control" id="reg-password" required placeholder="Minimal 8 karakter">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i class="fa-solid fa-user-plus"></i> Buat Akun Baru
+                </button>
+              </form>
+
+              <div class="auth-divider">
+                <span>atau masuk dengan</span>
+              </div>
+
+              <div class="social-login-grid">
+                <button class="btn-social" onclick="app.showToast('Login Google dalam proses simulasi...', 'info')">
+                  <i class="fa-brands fa-google" style="color: #EA4335;"></i> Google
+                </button>
+                <button class="btn-social" onclick="app.showToast('Login Microsoft dalam proses simulasi...', 'info')">
+                  <i class="fa-brands fa-microsoft" style="color: #00A4EF;"></i> Microsoft
+                </button>
+              </div>
+
+              
+              <div class="demo-account-buttons">
+                <p>Uji Coba Cepat (Akun Demo):</p>
+                <div class="demo-btn-group">
+                  <button class="btn btn-xs btn-outline" onclick="app.quickDemoLogin('warga')">
+                    <i class="fa-solid fa-user"></i> Sebagai Warga
+                  </button>
+                  <button class="btn btn-xs btn-primary" onclick="app.quickDemoLogin('petugas')">
+                    <i class="fa-solid fa-user-tie"></i> Sebagai Petugas PU
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DASHBOARD UTAMA (MASYARAKAT) -->
+      <section id="view-dashboard" class="app-view active">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Selamat datang, <span id="dash-greeting-name">Andi Pratama</span> 👋</h1>
+              <p>Berikut ringkasan kondisi infrastruktur dan layanan publik di Indonesia.</p>
+            </div>
+            <div>
+              <a href="#laporan-form" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Buat Laporan Baru
+              </a>
+            </div>
+          </div>
+
+          <!-- 4 Stat Cards -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Total Laporan</h5>
+                <div class="stat-number" id="stat-total-laporan">12.428</div>
+                <div class="stat-trend trend-up">
+                  <i class="fa-solid fa-arrow-trend-up"></i> +12% dari bulan lalu
+                </div>
+              </div>
+              <div class="stat-icon icon-blue">
+                <i class="fa-solid fa-folder-open"></i>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Dalam Proses</h5>
+                <div class="stat-number" id="stat-dalam-proses">3.842</div>
+                <div class="stat-trend trend-down">
+                  <i class="fa-solid fa-arrow-trend-down"></i> -2% dari bulan lalu
+                </div>
+              </div>
+              <div class="stat-icon icon-amber">
+                <i class="fa-solid fa-spinner"></i>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Selesai (BuktiTuntas)</h5>
+                <div class="stat-number" id="stat-selesai">7.421</div>
+                <div class="stat-trend trend-up">
+                  <i class="fa-solid fa-arrow-trend-up"></i> +18% dari bulan lalu
+                </div>
+              </div>
+              <div class="stat-icon icon-emerald">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Tertunda / Menunggu</h5>
+                <div class="stat-number" id="stat-tertunda">1.165</div>
+                <div class="stat-trend trend-neutral">
+                  <i class="fa-solid fa-clock"></i> +3% dari bulan lalu
+                </div>
+              </div>
+              <div class="stat-icon icon-rose">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Laporan Terbaru & Grafik Laporan -->
+          <div class="dashboard-columns">
+            <!-- Left: Laporan Terbaru List -->
+            <div class="card-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Laporan Terbaru</h3>
+                <a href="#daftar-laporan" class="btn btn-xs btn-outline">Lihat Semua</a>
+              </div>
+              <div class="recent-reports-list" id="dashboard-recent-reports">
+                <!-- Injected dynamically by app.js -->
+              </div>
+            </div>
+
+            <!-- Grafik Laporan (Chart.js) -->
+            <div class="card-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Grafik Laporan</h3>
+                <div class="period-toggle-group">
+                  <button class="period-btn" onclick="app.setChartPeriod('7hari', this)">7 Hari</button>
+                  <button class="period-btn active" onclick="app.setChartPeriod('sebulan', this)">Sebulan</button>
+                  <button class="period-btn" onclick="app.setChartPeriod('1tahun', this)">1 Tahun</button>
+                </div>
+              </div>
+              <div style="height: 280px; position: relative;">
+                <canvas id="dashboard-report-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!--HALAMAN FORMULIR LAPORAN (FORM PENGADUAN)-->
+      <section id="view-laporan-form" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Buat Laporan Baru</h1>
+              <p>Laporkan kerusakan atau masalah infrastruktur di sekitar Anda secara detail.</p>
+            </div>
+          </div>
+
+          <form id="report-create-form" onsubmit="app.submitReportForm(event)">
+            <div class="form-grid-2">
+              <div class="card-panel">
+                <div class="form-group">
+                  <label class="form-label">Kategori Laporan <span class="req">*</span></label>
+                  <select class="form-control" id="report-category-select" required>
+                    <option value="Jalan">Jalan & Jembatan (Jalan Berlubang, Retak, dsb)</option>
+                    <option value="Lampu">Lampu Jalan (PJU Mati, Tiang Miring)</option>
+                    <option value="Drainase">Drainase & Gorong-gorong (Tersumbat, Meluap)</option>
+                    <option value="Fasilitas">Fasilitas Umum & Gedung (Halte, Taman, Sekolah)</option>
+                    <option value="Lainnya">Kebersihan & Sampah Liar</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Judul Laporan <span class="req">*</span></label>
+                  <input type="text" class="form-control" id="report-title-input" required placeholder="Contoh: Jalan berlubang parah di Jl. Melati">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Deskripsi Masalah <span class="req">*</span></label>
+                  <textarea class="form-control" id="report-desc-input" maxlength="500" required placeholder="Jelaskan detail masalah yang terjadi, ukuran kerusakan, dan dampaknya bagi pengguna jalan..." oninput="document.getElementById('desc-counter').textContent = `${this.value.length}/500`"></textarea>
+                  <span class="char-counter" id="desc-counter">0/500</span>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Alamat / Patokan Lokasi <span class="req">*</span></label>
+                  <input type="text" class="form-control" id="report-location-input" required placeholder="Contoh: Jl. Melati No. 14, Menteng (depan ruko apotek)">
+                </div>
+              </div>
+
+              <!-- Upload Foto & Map Location Picker -->
+              <div class="card-panel">
+                <div class="form-group">
+                  <label class="form-label">Unggah Foto Bukti Kerusakan <span class="req">*</span></label>
+                  <div class="photo-dropzone" onclick="document.getElementById('report-file-input').click()">
+                    <input type="file" id="report-file-input" accept="image/*" style="display: none;" onchange="app.handlePhotoUpload(this)">
+                    
+                    <div class="dropzone-inner" id="form-dropzone-content">
+                      <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+                      <div class="dropzone-text">
+                        <h4>Klik atau Seret Foto ke Sini</h4>
+                        <p>Format: JPG, PNG, WEBP (Maksimal 5MB)</p>
+                      </div>
+                    </div>
+
+                    <div class="photo-preview-box" id="form-photo-preview" style="display: none;">
+                      <img src="" id="form-preview-img" alt="Pratinjau Foto">
+                      <button type="button" class="btn-remove-photo" onclick="event.stopPropagation(); app.removeUploadedPhoto();">
+                        <i class="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px;">
+                    <label class="form-label" style="margin-bottom: 0;">Titik Koordinat Peta</label>
+                    <button type="button" class="btn btn-xs btn-outline" onclick="app.getCurrentLocation()">
+                      <i class="fa-solid fa-location-crosshairs"></i> Gunakan GPS Saya
+                    </button>
+                  </div>
+                  
+                  <div class="map-picker-container">
+                    <div id="report-form-map" style="width: 100%; height: 100%;"></div>
+                    <div class="map-coords-badge" id="report-coords-text">Lat: -6.18950, Lng: 106.83220</div>
+                  </div>
+                  <small style="color: var(--color-slate-500); font-size: 11.5px; display: block; margin-top: 5px;">
+                    💡 Geser pin merah atau klik peta untuk menentukan titik koordinat yang presisi.
+                  </small>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block" style="padding: 13px;">
+                  <i class="fa-solid fa-paper-plane"></i> Kirim Laporan Sekarang
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!--  DAFTAR LAPORAN SAYA -->
+      <section id="view-daftar-laporan" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Daftar Laporan Saya</h1>
+              <p>Berikut adalah semua laporan infrastruktur dan layanan publik yang pernah Anda buat.</p>
+            </div>
+            <a href="#laporan-form" class="btn btn-primary">
+              <i class="fa-solid fa-plus"></i> Buat Laporan
+            </a>
+          </div>
+
+          <!--Toolbar -->
+          <div class="filter-toolbar">
+            <div class="filter-chips-group">
+              <button class="filter-chip active" data-filter="all" onclick="app.filterReportsList('all')">Semua</button>
+              <button class="filter-chip" data-filter="proses" onclick="app.filterReportsList('proses')">Dalam Proses</button>
+              <button class="filter-chip" data-filter="selesai" onclick="app.filterReportsList('selesai')">Selesai (BuktiTuntas)</button>
+              <button class="filter-chip" data-filter="tertunda" onclick="app.filterReportsList('tertunda')">Tertunda / Menunggu</button>
+            </div>
+
+            <div class="search-sort-box">
+              <input type="text" class="form-control" id="reports-search-input" placeholder="Cari judul, tiket, lokasi..." style="width: 240px; padding: 8px 14px;" oninput="app.filterReportsList()">
+              <select class="form-control" id="reports-sort-select" style="width: 140px; padding: 8px 12px;" onchange="app.filterReportsList()">
+                <option value="newest">Terbaru</option>
+                <option value="oldest">Terlama</option>
+              </select>
+            </div>
+          </div>
+
+
+          <div class="reports-list-container" id="reports-list-container">
+          </div>
+
+          <!-- Empty State -->
+          <div id="reports-empty-state" style="display: none; text-align: center; padding: 60px 20px; background: white; border-radius: 16px; border: 1px solid var(--color-slate-200);">
+            <i class="fa-solid fa-clipboard-list" style="font-size: 44px; color: var(--color-slate-300); margin-bottom: 12px;"></i>
+            <h3>Tidak Ada Laporan Ditemukan</h3>
+            <p style="color: var(--color-slate-500); max-width: 400px; margin: 4px auto 16px;">Tidak ada laporan yang sesuai dengan filter atau kata kunci pencarian Anda.</p>
+            <button class="btn btn-secondary" onclick="document.getElementById('reports-search-input').value=''; app.filterReportsList('all');">Reset Filter</button>
+          </div>
+        </div>
+      </section>
+
+      <!--DETAIL & TRACKING LAPORAN (FITUR UNGGULAN: BuktiTuntas)-->
+      <section id="view-detail-laporan" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <a href="#daftar-laporan" class="btn btn-outline btn-xs">
+                <i class="fa-solid fa-arrow-left"></i> Kembali
+              </a>
+              <span class="detail-ticket-badge" id="detail-ticket-code" style="margin-bottom: 0;">INF-2025-0012</span>
+              <span class="badge badge-selesai" id="detail-status-badge">Selesai</span>
+            </div>
+            <div>
+              <button class="btn btn-outline btn-xs" onclick="app.copyTicketCode()">
+                <i class="fa-regular fa-copy"></i> Salin Nomor Tiket
+              </button>
+            </div>
+          </div>
+
+          <div class="detail-layout-grid">
+            <!-- Left Column: Report Info & Timeline -->
+            <div>
+              <div class="detail-hero-card">
+                <div class="detail-hero-thumb" id="detail-hero-thumb" style="background-image: url('assets/images/road_before.jpg');"></div>
+                <div class="detail-hero-content">
+                  <h2 class="detail-title" id="detail-title">Jalan rusak di Jl. Melati</h2>
+                  
+                  <div class="detail-meta-list">
+                    <div class="detail-meta-item">
+                      <span>Kategori Laporan</span>
+                      <strong id="detail-category">Jalan & Jembatan</strong>
+                    </div>
+                    <div class="detail-meta-item">
+                      <span>Lokasi Kejadian</span>
+                      <strong id="detail-location">Jl. Melati, Jakarta Pusat</strong>
+                    </div>
+                    <div class="detail-meta-item">
+                      <span>Waktu Dilaporkan</span>
+                      <strong id="detail-date">10 Mei 2025, 10:24 WIB</strong>
+                    </div>
+                    <div class="detail-meta-item">
+                      <span>Instansi Penanggung Jawab</span>
+                      <strong id="detail-agency">Dinas Bina Marga DKI Jakarta</strong>
+                    </div>
+                  </div>
+
+                  <p id="detail-description" style="color: var(--color-slate-700); line-height: 1.6;">
+                    Terdapat lubang cukup besar di tengah jalan yang membahayakan pengendara motor, terutama saat malam hari dan saat hujan karena tertutup genangan air.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Timeline Perkembangan -->
+              <div class="timeline-card">
+                <h3 class="panel-title" style="margin-bottom: 8px;">Timeline Perkembangan</h3>
+                <p style="font-size: 12.5px; color: var(--color-slate-500); margin-bottom: 16px;">
+                  Setiap tahapan penanganan dicatat secara transparan dan akuntabel.
+                </p>
+                <div class="timeline-list" id="detail-timeline-container">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- FITUR UNGGULAN BuktiTuntas (Before vs After Slider) -->
+            <div>
+              <div class="buktituntas-card-wrapper" id="buktituntas-card-wrapper">
+                <!-- BuktiTuntas Slider & Citizen Confirmation injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!--  PENGADUAN PELAYANAN PUBLIK -->
+      <section id="view-pengaduan" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Pengaduan Pelayanan Publik</h1>
+              <p>Sampaikan keluhan Anda terkait birokrasi, pungutan liar, atau pelayanan instansi yang lambat.</p>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <!-- Form Pengaduan -->
+            <div class="card-panel">
+              <h3 class="panel-title" style="margin-bottom: 16px;">Buat Pengaduan Baru</h3>
+              <form id="complaint-create-form" onsubmit="app.submitComplaintForm(event)">
+                <div class="form-group">
+                  <label class="form-label">Kategori Pengaduan</label>
+                  <select class="form-control" id="complaint-category" required>
+                    <option value="Pelayanan Kantor Kelurahan / Kecamatan">Pelayanan Kantor Kelurahan / Kecamatan</option>
+                    <option value="Puskesmas & Layanan Kesehatan">Puskesmas & Layanan Kesehatan</option>
+                    <option value="Kependudukan & Pencatatan Sipil (Dukcapil)">Kependudukan & Pencatatan Sipil (Dukcapil)</option>
+                    <option value="Transportasi Publik & Terminal">Transportasi Publik & Terminal</option>
+                    <option value="Pungutan Liar (Pungli) / Gratifikasi">Pungutan Liar (Pungli) / Gratifikasi</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Instansi / Kantor Terlapor</label>
+                  <input type="text" class="form-control" id="complaint-agency" required placeholder="Contoh: Kantor Kelurahan Menteng">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Judul Pengaduan</label>
+                  <input type="text" class="form-control" id="complaint-title" required placeholder="Contoh: Pelayanan KTP lambat dan petugas tidak di loket">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Uraian Masalah</label>
+                  <textarea class="form-control" id="complaint-desc" rows="4" required placeholder="Jelaskan kronologi kejadian secara runtut dan jelas..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i class="fa-solid fa-paper-plane"></i> Kirim Pengaduan
+                </button>
+              </form>
+            </div>
+
+            <!-- Riwayat Pengaduan Pelayanan -->
+            <div>
+              <div class="card-panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Riwayat Pengaduan Saya</h3>
+                  <span class="badge badge-proses">Terkoneksi Ombudsman RI</span>
+                </div>
+                <div class="complaints-list" id="complaints-list-container">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PERIZINAN ONLINE-->
+      <section id="view-perizinan" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Pengajuan Perizinan Online</h1>
+              <p>Ajukan perizinan usaha dan bangunan secara digital serta pantau tahapan verifikasinya.</p>
+            </div>
+          </div>
+
+          <div class="form-grid-2">
+            <!-- Left: Form Pengajuan Izin -->
+            <div class="card-panel">
+              <h3 class="panel-title" style="margin-bottom: 16px;">Form Pengajuan Izin Usaha / Bangunan</h3>
+              <form id="permit-create-form" onsubmit="app.submitPermitForm(event)">
+                <div class="form-group">
+                  <label class="form-label">Jenis Perizinan</label>
+                  <select class="form-control" id="permit-type-select" required>
+                    <option value="Izin Usaha Mikro & Kecil (IUMK)">Izin Usaha Mikro & Kecil (IUMK)</option>
+                    <option value="Persetujuan Bangunan Gedung (PBG / IMB)">Persetujuan Bangunan Gedung (PBG / IMB)</option>
+                    <option value="Surat Pernyataan Pengelolaan Lingkungan (SPPL)">Izin Lingkungan (SPPL/UKL-UPL)</option>
+                    <option value="Izin Keramaian & Acara Publik">Izin Penyelenggaraan Keramaian</option>
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Nama Usaha / Objek Izin</label>
+                  <input type="text" class="form-control" id="permit-business-name" required placeholder="Contoh: Kedai Kopi Melati Rasa">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Sektor / Bidang Kegiatan</label>
+                  <input type="text" class="form-control" id="permit-business-category" required placeholder="Contoh: Kuliner & Minuman">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Alamat Lengkap Lokasi</label>
+                  <input type="text" class="form-control" id="permit-location" required placeholder="Contoh: Jl. Melati No. 10, Jakarta Pusat">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Unggah Dokumen KTP & Proposal (PDF/ZIP)</label>
+                  <input type="file" class="form-control" accept=".pdf,.zip,.jpg,.png">
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                  <i class="fa-solid fa-stamp"></i> Ajukan Permohonan Izin
+                </button>
+              </form>
+            </div>
+
+            <!--  Status Permohonan Perizinan -->
+            <div>
+              <div class="card-panel">
+                <div class="panel-header">
+                  <h3 class="panel-title">Daftar Permohonan Izin</h3>
+                  <span class="badge badge-selesai">OSS Terintegrasi</span>
+                </div>
+                <div id="permits-list-container">
+                  <!-- Injected dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- BANTUAN SOSIAL (BANSOS)-->
+      <section id="view-bansos" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Portal Bantuan Sosial (Bansos)</h1>
+              <p>Informasi program bantuan dan pengecekan kelayakan penerima berbasis Nomor Induk Kependudukan (NIK).</p>
+            </div>
+          </div>
+
+          <div class="bansos-layout-grid">
+            <!-- Left: Daftar Program Bantuan -->
+            <div class="card-panel">
+              <h3 class="panel-title" style="margin-bottom: 16px;">Program Bantuan Pemerintah Aktif</h3>
+              
+              <div class="bansos-program-list">
+                <div class="bansos-program-card" onclick="document.getElementById('bansos-nik-input').value='3171012345670001'; app.checkBansosStatus();">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="stat-icon icon-blue"><i class="fa-solid fa-people-roof"></i></div>
+                    <div>
+                      <h4 style="font-size: 15px; font-weight: 700;">Program Keluarga Harapan (PKH)</h4>
+                      <p style="font-size: 12px; color: var(--color-slate-500);">Bantuan bersyarat untuk keluarga rentan & pendidikan anak.</p>
+                    </div>
+                  </div>
+                  <i class="fa-solid fa-chevron-right" style="color: var(--color-slate-400);"></i>
+                </div>
+
+                <div class="bansos-program-card" onclick="document.getElementById('bansos-nik-input').value='3171012345670002'; app.checkBansosStatus();">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="stat-icon icon-emerald"><i class="fa-solid fa-basket-shopping"></i></div>
+                    <div>
+                      <h4 style="font-size: 15px; font-weight: 700;">Bantuan Pangan Non Tunai (BPNT)</h4>
+                      <p style="font-size: 12px; color: var(--color-slate-500);">Bantuan sembako bahan pokok bergizi tiap bulan.</p>
+                    </div>
+                  </div>
+                  <i class="fa-solid fa-chevron-right" style="color: var(--color-slate-400);"></i>
+                </div>
+
+                <div class="bansos-program-card" onclick="document.getElementById('bansos-nik-input').value='3171012345670003'; app.checkBansosStatus();">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="stat-icon icon-amber"><i class="fa-solid fa-money-bill-wave"></i></div>
+                    <div>
+                      <h4 style="font-size: 15px; font-weight: 700;">BLT Dana Desa / Kelurahan</h4>
+                      <p style="font-size: 12px; color: var(--color-slate-500);">Bantuan tunai langsung stimulus ekonomi lokal.</p>
+                    </div>
+                  </div>
+                  <i class="fa-solid fa-chevron-right" style="color: var(--color-slate-400);"></i>
+                </div>
+
+                <div class="bansos-program-card">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div class="stat-icon icon-purple"><i class="fa-solid fa-graduation-cap"></i></div>
+                    <div>
+                      <h4 style="font-size: 15px; font-weight: 700;">Program Indonesia Pintar (PIP)</h4>
+                      <p style="font-size: 12px; color: var(--color-slate-500);">Subsidi biaya pendidikan siswa SD, SMP, SMA/SMK.</p>
+                    </div>
+                  </div>
+                  <i class="fa-solid fa-chevron-right" style="color: var(--color-slate-400);"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cek Status NIK Penerima Bansos -->
+            <div class="card-panel bansos-search-box">
+              <h3 class="panel-title" style="margin-bottom: 8px;">Cek Status Penerima Bantuan</h3>
+              <p style="font-size: 13px; color: var(--color-slate-500); margin-bottom: 18px;">
+                Masukkan 16 digit Nomor Induk Kependudukan (NIK) pada e-KTP Anda untuk memverifikasi hak bantuan.
+              </p>
+
+              <div style="display: flex; gap: 10px; margin-bottom: 14px;">
+                <input type="text" class="form-control" id="bansos-nik-input" placeholder="Masukkan 16 Digit NIK atau Nama Program..." value="3171012345670001">
+                <button class="btn btn-primary" onclick="app.checkBansosStatus()" style="white-space: nowrap;">
+                  <i class="fa-solid fa-magnifying-glass"></i> Cek Status
+                </button>
+              </div>
+
+              <!-- Result Area -->
+              <div id="bansos-result-box" style="display: none;">
+                <!-- Result dynamically rendered -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!--DATA & TRANSPARANSI (PETA LEAFLET & GRAFIK)-->
+      <section id="view-transparansi" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Data & Transparansi Publik</h1>
+              <p>Informasi terbuka untuk masyarakat demi akuntabilitas pembangunan nasional.</p>
+            </div>
+            <div class="period-toggle-group">
+              <button class="period-btn">7 Hari</button>
+              <button class="period-btn active">30 Hari</button>
+              <button class="period-btn">1 Tahun</button>
+            </div>
+          </div>
+
+          <!-- Transparency Stat Summary Cards -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Total Laporan</h5>
+                <div class="stat-number" id="transp-total-laporan">12.428</div>
+                <div class="stat-trend trend-up">100% Tercatat</div>
+              </div>
+              <div class="stat-icon icon-blue"><i class="fa-solid fa-database"></i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Selesai (BuktiTuntas)</h5>
+                <div class="stat-number" id="transp-selesai">8.021</div>
+                <div class="stat-trend trend-up"><i class="fa-solid fa-circle-check"></i> 64.5% Terselesaikan</div>
+              </div>
+              <div class="stat-icon icon-emerald"><i class="fa-solid fa-award"></i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Sedang Dikerjakan</h5>
+                <div class="stat-number" id="transp-proses">3.242</div>
+                <div class="stat-trend trend-neutral"><i class="fa-solid fa-person-digging"></i> 26.1% Lapangan</div>
+              </div>
+              <div class="stat-icon icon-amber"><i class="fa-solid fa-helmet-safety"></i></div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Waktu Respon Rata-rata</h5>
+                <div class="stat-number">2.8 Hari</div>
+                <div class="stat-trend trend-up"><i class="fa-solid fa-bolt"></i> Sangat Cepat</div>
+              </div>
+              <div class="stat-icon icon-purple"><i class="fa-solid fa-gauge-high"></i></div>
+            </div>
+          </div>
+
+          <!-- Peta Sebaran Laporan (LeafletJS) -->
+          <div class="transparency-map-wrapper">
+            <div class="map-header-bar">
+              <div>
+                <h3 style="font-size: 16px; font-weight: 700; color: var(--color-slate-900);">Peta Sebaran Laporan Infrastruktur</h3>
+                <p style="font-size: 12.5px; color: var(--color-slate-500); margin-top: 2px;">
+                  Sebaran titik aduan masyarakat secara realtime dengan kode warna penanganan.
+                </p>
+              </div>
+
+              <!-- Map Category Filters -->
+              <div class="map-legend-pills">
+                <span class="map-filter-chip active" data-cat="all" onclick="app.filterTransparencyMapCategory('all')">Semua Masalah</span>
+                <span class="map-filter-chip" data-cat="Jalan" onclick="app.filterTransparencyMapCategory('Jalan')">🟠 Jalan Rusak</span>
+                <span class="map-filter-chip" data-cat="Lampu" onclick="app.filterTransparencyMapCategory('Lampu')">💡 Lampu Jalan</span>
+                <span class="map-filter-chip" data-cat="Drainase" onclick="app.filterTransparencyMapCategory('Drainase')">💧 Drainase</span>
+                <span class="map-filter-chip" data-cat="Fasilitas" onclick="app.filterTransparencyMapCategory('Fasilitas')">🏫 Fasilitas Umum</span>
+              </div>
+            </div>
+
+            <!-- Leaflet Container -->
+            <div id="transparency-map"></div>
+          </div>
+
+          <!-- Charts Grid -->
+          <div class="transparency-charts-grid">
+            <div class="card-panel">
+              <h3 class="panel-title" style="margin-bottom: 14px;">Distribusi Status Penanganan</h3>
+              <div style="height: 260px; position: relative;">
+                <canvas id="transparency-status-chart"></canvas>
+              </div>
+            </div>
+
+            <div class="card-panel">
+              <h3 class="panel-title" style="margin-bottom: 14px;">Tren Penyelesaian Laporan (Bulanan)</h3>
+              <div style="height: 260px; position: relative;">
+                <canvas id="transparency-trend-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- LACAK PENGAJUAN (PORTAL PUBLIK)-->
+      <section id="view-lacak-publik" class="app-view">
+        <div class="public-portal-wrapper">
+          <!-- Public Navbar -->
+          <header class="public-navbar">
+            <a href="#dashboard" class="brand-logo">
+              <div class="brand-icon-box">
+                <i class="fa-solid fa-landmark-dome"></i>
+              </div>
+              <div class="brand-text">
+                <h2>InfrastrukturKu</h2>
+                <span>Portal Pelayanan Publik</span>
+              </div>
+            </a>
+
+            <div class="public-nav-links">
+              <a href="#dashboard">Beranda</a>
+              <a href="#daftar-laporan">Layanan</a>
+              <a href="#transparansi">Data Transparansi</a>
+              <a href="#auth" class="btn btn-primary btn-xs">Masuk / Daftar</a>
+            </div>
+          </header>
+
+          <!-- Hero Search Section -->
+          <div class="public-hero-section" style="background-image: url('assets/images/hero_monas.jpg');">
+            <div class="public-hero-overlay"></div>
+            
+            <div class="public-hero-content">
+              <h1>Lacak Pengajuan & Laporan</h1>
+              <p>Pantau perkembangan laporan kerusakan dan perizinan Anda secara transparan cukup dengan memasukkan nomor tiket.</p>
+              
+              <div class="hero-search-box">
+                <input type="text" id="public-search-input" placeholder="Masukkan nomor tiket Anda (contoh: INF-2025-0012)" value="INF-2025-0012" onkeypress="if(event.key==='Enter') app.searchPublicTicket();">
+                <button class="btn btn-primary" onclick="app.searchPublicTicket()" style="border-radius: 9999px; padding: 10px 24px;">
+                  <i class="fa-solid fa-magnifying-glass"></i> Cari
+                </button>
+              </div>
+
+              <div class="hero-quick-chips">
+                <span class="quick-chip" onclick="app.searchPublicTicket('INF-2025-0012')">🛣️ INF-2025-0012 (Jalan Melati)</span>
+                <span class="quick-chip" onclick="app.searchPublicTicket('INF-2025-0011')">💡 INF-2025-0011 (Lampu Sleman)</span>
+                <span class="quick-chip" onclick="app.searchPublicTicket('INF-2025-0010')">💧 INF-2025-0010 (Drainase Surabaya)</span>
+              </div>
+
+              <!-- Search Result Container -->
+              <div id="public-ticket-result" style="display: none;">
+                <!-- Injected dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- DASHBOARD INSTANSI (PETUGAS LAPANGAN / DINAS PU)-->
+      <section id="view-dashboard-instansi" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Dashboard Instansi & Petugas Lapangan</h1>
+              <p>Kelola tindak lanjut laporan, tugaskan satgas, dan unggah dokumentasi <strong>BuktiTuntas</strong>.</p>
+            </div>
+            <div>
+              <button class="btn btn-primary" onclick="app.switchUserRole('warga')">
+                <i class="fa-solid fa-repeat"></i> Beralih ke Tampilan Warga
+              </button>
+            </div>
+          </div>
+
+          <!-- Officer KPIs -->
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Laporan Masuk</h5>
+                <div class="stat-number" id="officer-stat-masuk">1.248</div>
+                <div class="stat-trend trend-neutral">Wilayah DKI Jakarta</div>
+              </div>
+              <div class="stat-icon icon-blue"><i class="fa-solid fa-inbox"></i></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Dalam Proses Fisik</h5>
+                <div class="stat-number" id="officer-stat-proses">842</div>
+                <div class="stat-trend trend-up"><i class="fa-solid fa-person-digging"></i> Satgas Diterjunkan</div>
+              </div>
+              <div class="stat-icon icon-amber"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Selesai BuktiTuntas</h5>
+                <div class="stat-number" id="officer-stat-selesai">351</div>
+                <div class="stat-trend trend-up"><i class="fa-solid fa-check-double"></i> 95% Rating Puas</div>
+              </div>
+              <div class="stat-icon icon-emerald"><i class="fa-solid fa-circle-check"></i></div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-info">
+                <h5>Perlu Verifikasi</h5>
+                <div class="stat-number" id="officer-stat-verifikasi">55</div>
+                <div class="stat-trend trend-down">Prioritas 24 Jam</div>
+              </div>
+              <div class="stat-icon icon-rose"><i class="fa-solid fa-bell"></i></div>
+            </div>
+          </div>
+
+          <!-- Officer Layout Grid -->
+          <div class="officer-layout-grid">
+            <!-- Left: Table of Reports -->
+            <div class="card-panel">
+              <div class="panel-header">
+                <h3 class="panel-title">Daftar Antrean Tugas Laporan</h3>
+                <span class="badge badge-proses">Mode Petugas Aktif</span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>No. Tiket</th>
+                      <th>Kategori</th>
+                      <th>Judul Masalah</th>
+                      <th>Lokasi</th>
+                      <th>Status</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="officer-reports-table-body">
+                    <!-- Populated by app.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Mini Map Tugas & Kinerja Petugas -->
+            <div>
+              <div class="card-panel" style="margin-bottom: 24px;">
+                <h3 class="panel-title">Peta Tugas Wilayah</h3>
+                <p style="font-size: 12px; color: var(--color-slate-500); margin-top: 2px;">
+                  Titik lokasi perbaikan aktif di zona kerja Dinas Bina Marga.
+                </p>
+                <div id="officer-task-map"></div>
+              </div>
+
+              <div class="card-panel">
+                <h3 class="panel-title">Indeks Kinerja Satgas</h3>
+                <div style="height: 220px; position: relative;">
+                  <canvas id="officer-performance-chart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PROFIL & PENGATURAN-->
+      <section id="view-profil" class="app-view">
+        <div class="view-container">
+          <div class="page-header">
+            <div class="page-title-wrap">
+              <h1>Profil & Pengaturan Akun</h1>
+              <p>Kelola data identitas kependudukan dan preferensi keamanan Anda.</p>
+            </div>
+            <div>
+              <span class="badge badge-selesai" id="current-role-badge">Warga Terverifikasi</span>
+            </div>
+          </div>
+
+          <div class="profile-layout-grid">
+            <!-- Left: Profile Summary -->
+            <div class="profile-card">
+              <div class="profile-avatar-wrap">
+                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80" alt="Avatar">
+                <button class="btn-avatar-edit" onclick="app.showToast('Fitur unggah avatar profil aktif.', 'info')">
+                  <i class="fa-solid fa-camera"></i>
+                </button>
+              </div>
+              <h3 class="profile-name">Andi Pratama</h3>
+              <p class="profile-email">andipratama@gmail.com</p>
+              
+              <div class="profile-settings-menu">
+                <div class="profile-menu-item" onclick="app.showToast('Buka modal ubah sandi', 'info')">
+                  <i class="fa-solid fa-key"></i>
+                  <span>Ubah Password</span>
+                </div>
+                <div class="profile-menu-item" onclick="app.showToast('Notifikasi WhatsApp & Email telah aktif.', 'info')">
+                  <i class="fa-regular fa-bell"></i>
+                  <span>Pengaturan Notifikasi</span>
+                </div>
+                <div class="profile-menu-item" onclick="app.showToast('Autentikasi dua langkah (2FA) diaktifkan.', 'success')">
+                  <i class="fa-solid fa-shield-halved"></i>
+                  <span>Keamanan Akun (2FA)</span>
+                </div>
+                <div class="profile-menu-item" onclick="app.switchUserRole()">
+                  <i class="fa-solid fa-user-shield"></i>
+                  <span>Beralih Mode (Warga / Petugas)</span>
+                </div>
+                <div class="profile-menu-item danger-link" onclick="app.logout()">
+                  <i class="fa-solid fa-right-from-bracket"></i>
+                  <span>Keluar dari Akun (Logout)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Edit Informasi Pribadi -->
+            <div class="card-panel">
+              <h3 class="panel-title" style="margin-bottom: 16px;">Informasi Pribadi</h3>
+              <form onsubmit="app.saveProfile(event)">
+                <div class="form-group">
+                  <label class="form-label">Nama Lengkap</label>
+                  <input type="text" class="form-control" id="profile-input-name" value="Andi Pratama" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Nomor Induk Kependudukan (NIK)</label>
+                  <input type="text" class="form-control" id="profile-input-nik" value="3171012345670001" readonly style="background: var(--color-slate-100);">
+                  <small style="color: var(--color-slate-500); font-size: 11px;">NIK terverifikasi dengan database kependudukan nasional (Dukcapil).</small>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Alamat Email</label>
+                  <input type="email" class="form-control" id="profile-input-email" value="andipratama@gmail.com" readonly style="background: var(--color-slate-100);">
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Nomor WhatsApp / HP</label>
+                  <input type="tel" class="form-control" id="profile-input-phone" value="0812-3456-7890" required>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">Alamat Lengkap Domisili</label>
+                  <textarea class="form-control" id="profile-input-address" rows="3">Jl. Melati No. 10, RT 03 RW 05, Menteng, Jakarta Pusat</textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-floppy-disk"></i> Simpan Perubahan
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!--  MODALS & DIALOGS-->
+
+  <!-- Report Submission Success -->
+  <div class="modal-overlay" id="modal-report-success">
+    <div class="modal-window">
+      <div class="modal-body" style="text-align: center; padding: 32px 24px;">
+        <div class="success-icon-box">
+          <i class="fa-solid fa-check"></i>
+        </div>
+        <h3 style="font-size: 20px; font-weight: 700; color: var(--color-slate-900);">Laporan Berhasil Terkirim!</h3>
+        <p style="color: var(--color-slate-500); font-size: 13.5px; margin-top: 6px;">
+          Laporan Anda dengan judul <strong id="modal-success-title">Jalan Rusak</strong> telah masuk antrean penanganan dinas terkait.
+        </p>
+
+        <div class="ticket-clipboard-box">
+          <div>
+            <span style="font-size: 11px; color: var(--color-primary-700); display: block; text-transform: uppercase;">Kode Tiket Anda</span>
+            <span id="modal-success-ticket">INF-2025-0013</span>
+          </div>
+          <button class="btn btn-outline btn-xs" onclick="app.copyTicketCode()">
+            <i class="fa-regular fa-copy"></i> Salin
+          </button>
+        </div>
+
+        <p style="font-size: 12px; color: var(--color-slate-400); margin-bottom: 20px;">
+          Simpan kode tiket di atas untuk melacak progres penanganan dan memeriksa <strong>BuktiTuntas</strong>.
+        </p>
+
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button class="btn btn-secondary" onclick="app.closeModal('modal-report-success'); app.navigate('daftar-laporan');">
+            Ke Daftar Laporan
+          </button>
+          <button class="btn btn-primary" onclick="app.closeModal('modal-report-success'); app.showReportDetail(app.selectedReportTicket);">
+            Pantau Laporan Ini <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!--  Konfirmasi Warga & Rating Bintang (BuktiTuntas) -->
+  <div class="modal-overlay" id="modal-citizen-confirm">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Konfirmasi Penyelesaian Masalah</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('modal-citizen-confirm')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13.5px; color: var(--color-slate-600); margin-bottom: 12px;">
+          Anda mengonfirmasi bahwa pekerjaan pada tiket <strong id="confirm-modal-ticket">INF-2025-0012</strong> telah selesai sesuai kondisi nyata di lapangan.
+        </p>
+
+        <label class="form-label">Tingkat Kepuasan Anda terhadap Hasil Pengerjaan:</label>
+        <div class="star-rating-picker" id="confirm-stars">
+          <button type="button" class="star-btn active" data-star="1" onclick="app.setStarRating(1)">★</button>
+          <button type="button" class="star-btn active" data-star="2" onclick="app.setStarRating(2)">★</button>
+          <button type="button" class="star-btn active" data-star="3" onclick="app.setStarRating(3)">★</button>
+          <button type="button" class="star-btn active" data-star="4" onclick="app.setStarRating(4)">★</button>
+          <button type="button" class="star-btn active" data-star="5" onclick="app.setStarRating(5)">★</button>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Ulasan / Testimoni Anda (Opsional)</label>
+          <textarea class="form-control" id="confirm-feedback-input" rows="3" placeholder="Contoh: Aspal sangat mulus dan jalan tidak becek lagi. Terima kasih satgas PU!"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.closeModal('modal-citizen-confirm')">Batal</button>
+        <button class="btn btn-success" onclick="app.submitCitizenConfirmation()">
+          <i class="fa-solid fa-check"></i> Kirim Konfirmasi & Rating
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Petugas Update Status & Unggah BuktiTuntas -->
+  <div class="modal-overlay" id="modal-officer-update">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3>Tindak Lanjut & Update BuktiTuntas</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('modal-officer-update')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="background: var(--color-slate-50); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+          <span style="font-family: monospace; font-size: 12px; font-weight: 700; color: var(--color-primary-600);" id="officer-modal-ticket">INF-2025-0012</span>
+          <h4 style="font-size: 14px; margin-top: 2px;" id="officer-modal-report-title">Jalan rusak</h4>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Perbarui Status Laporan</label>
+          <select class="form-control" id="officer-status-select">
+            <option value="Dalam Proses">Dalam Proses (Pengerjaan Fisik)</option>
+            <option value="Selesai">Selesai (Unggah Foto BuktiTuntas)</option>
+            <option value="Tertunda">Tertunda (Kendala Material/Cuaca)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Unggah Foto Sesudah (BuktiTuntas Hasil Perbaikan)</label>
+          <input type="file" class="form-control" accept="image/*" onchange="app.handleOfficerPhotoUpload(this)">
+          <div id="officer-photo-preview" style="display: none; margin-top: 8px;">
+            <img src="" id="officer-preview-img" style="width: 100%; height: 160px; object-fit: cover; border-radius: 8px;">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Catatan Teknis / Berita Acara Petugas</label>
+          <textarea class="form-control" id="officer-notes-input" rows="3" placeholder="Contoh: Pengaspalan hotmix seluas 4m x 2m telah selesai dikerjakan sesuai standar PU..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.closeModal('modal-officer-update')">Batal</button>
+        <button class="btn btn-primary" onclick="app.submitOfficerUpdate()">
+          <i class="fa-solid fa-save"></i> Simpan & Perbarui Status
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!--  Supabase Live Database Connection Settings -->
+  <div class="modal-overlay" id="modal-supabase-config">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-database" style="color: var(--color-primary-500);"></i> Pengaturan Supabase Live Database</h3>
+        <button class="modal-close-btn" onclick="app.closeModal('modal-supabase-config')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13px; color: var(--color-slate-600); margin-bottom: 14px;">
+          Secara default, aplikasi berjalan dalam <strong>High-Fidelity Mock & LocalStorage Mode</strong> sehingga langsung bekerja 100% interaktif. Anda dapat menghubungkan proyek Supabase asli Anda dengan memasukkan URL & Anon Key di bawah ini:
+        </p>
+        <div class="form-group">
+          <label class="form-label">Supabase Project URL</label>
+          <input type="url" class="form-control" id="cfg-supabase-url" placeholder="https://xxxxxxxx.supabase.co" value="">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Supabase Anon Public Key</label>
+          <input type="password" class="form-control" id="cfg-supabase-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." value="">
+        </div>
+        <div style="background: var(--color-primary-50); border: 1px solid var(--color-primary-100); padding: 12px; border-radius: 8px; font-size: 12px; color: var(--color-primary-800);">
+          💡 Skema SQL lengkap dengan tabel <code>reports</code>, <code>report_updates</code>, dan RLS security policies telah disediakan dalam berkas <code>sql/schema.sql</code>.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="app.closeModal('modal-supabase-config')">Tutup</button>
+        <button class="btn btn-primary" onclick="
+          const url = document.getElementById('cfg-supabase-url').value.trim();
+          const key = document.getElementById('cfg-supabase-key').value.trim();
+          if (url && key) {
+            window.supabaseService.updateCredentials(url, key);
+            app.showToast('Koneksi Supabase berhasil disimpan!', 'success');
+          } else {
+            app.showToast('Tetap menggunakan LocalStorage Live Mock Mode.', 'info');
+          }
+          app.closeModal('modal-supabase-config');
+        ">
+          Simpan Konfigurasi
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!--  Leaflet, Chart.js, Supabase, App Modules-->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Custom Scripts -->
+  <script src="js/data.js"></script>
+  <script src="js/supabase-config.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
